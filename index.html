@@ -97,6 +97,11 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .hero h1 { width: 100%; max-width: 560px; min-width: 0; }
 .hero h1 .line { display: block; white-space: nowrap; line-height: 1.3; }
 .hero .lead { font-size: clamp(18px, 2.2vw, 22px); max-width: 40ch; font-weight: 500; }
+.hblock { width: var(--hw, 100%); max-width: 100%; display: grid; justify-items: stretch; }
+.hblock .eyebrow { display: flex; justify-content: center; width: 100%; box-sizing: border-box; }
+.hblock .line { display: block; white-space: nowrap; }
+.hblock .lead { max-width: none; margin: 0; line-height: 1.45; }
+.hblock h1 .or { color: var(--orange); }
 .hero .cta { display: flex; flex-direction: column; align-items: center; gap: 14px; margin-top: 30px; }
 .top-tag { font-weight: 800; font-size: 14px; letter-spacing: .04em; color: var(--muted); }
 .vsl { width: 100%; display: grid; justify-items: center; margin-top: 30px; }
@@ -281,9 +286,11 @@ footer .wrap { display: grid; gap: 8px; }
 <main id="topo">
   <section class="hero">
     <div class="wrap">
-      <span class="eyebrow"><span class="star"></span>Aulas gravadas · edição com IA</span>
-      <h1><span class="line t3d">Seu vídeo editado</span><span class="line t3d or">por IA</span><span class="line t3d">em até 20 minutos.</span></h1>
-      <p class="lead"><strong>Apenas com 1 comando, a IA edita todo o seu vídeo!</strong><br>Assista o vídeo abaixo 👇</p>
+      <div class="hblock" id="hblock">
+        <span class="eyebrow"><span class="star"></span>Aulas gravadas · edição com IA</span>
+        <h1><span class="line fit t3d">Seu vídeo editado</span><span class="line fit t3d"><span class="or">por IA</span> em até</span><span class="line fit t3d">20 minutos.</span></h1>
+        <p class="lead"><span class="line fit"><strong>Com apenas 1 comando, a IA edita</strong></span><span class="line fit"><strong>todo o seu vídeo!</strong> Assista abaixo 👇</span></p>
+      </div>
       <div class="vsl">
         <div class="phone">
           <video id="heroVid" src="media/vsl.mp4" poster="media/poster_vsl.jpg" autoplay muted playsinline preload="auto"></video>
@@ -482,15 +489,13 @@ const CHECKOUT_URL = 'https://pay.cakto.com.br/3e5s38u_1212384';
     document.getElementById('checkout').href = CHECKOUT_URL;
   }
 
-  // headline em bloco: cada linha ocupa a mesma largura
-  const h1 = document.querySelector('.hero h1'), lines = [...h1.querySelectorAll('.line')];
+  // bloco do topo: selo, promessa e subpromessa com a mesma largura (bordas alinhadas)
+  const hb = document.getElementById('hblock'), fits = [...hb.querySelectorAll('.fit')];
   function fitHead() {
-    const W = Math.min(560, h1.parentElement.clientWidth - parseFloat(getComputedStyle(h1.parentElement).paddingLeft) - parseFloat(getComputedStyle(h1.parentElement).paddingRight)); if (!W) return;
-    const fit = lines.map(l => { l.style.fontSize = '100px'; return 100 * (W - 16) / l.scrollWidth; });
-    // mesmo tamanho nas linhas 1 e 3 (cabe a mais longa, com folga); "por IA" só um pouco maior
-    const base = Math.min(44, fit[0], fit[2]) * 0.94;
-    lines[0].style.fontSize = base + 'px'; lines[2].style.fontSize = base + 'px';
-    lines[1].style.fontSize = Math.min(fit[1], base * 1.28) + 'px';
+    const par = hb.parentElement, cs = getComputedStyle(par);
+    const W = Math.min(520, par.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)); if (!W) return;
+    hb.style.setProperty('--hw', W + 'px');
+    fits.forEach(l => { l.style.fontSize = '100px'; l.style.letterSpacing = ''; const w = l.scrollWidth; l.style.fontSize = (100 * (W - 2) / w) + 'px'; });
   }
   fitHead(); (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(fitHead);
   addEventListener('resize', fitHead);

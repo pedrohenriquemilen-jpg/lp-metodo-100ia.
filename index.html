@@ -100,6 +100,12 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .hblock { width: var(--hw, 100%); max-width: 100%; display: grid; justify-items: stretch; }
 .hblock .eyebrow { display: flex; justify-content: center; width: 100%; box-sizing: border-box; }
 .hblock .line { display: block; white-space: nowrap; }
+html, body { max-width: 100%; overflow-x: hidden; }
+@supports (overflow: clip) { html, body { overflow-x: clip; } }
+.hblock { overflow: visible; }
+.hblock h1 .line.fit { font-size: 6.4vw; }
+.hblock .lead .line.fit { font-size: 3.9vw; }
+@media (min-width: 560px) { .hblock h1 .line.fit { font-size: 36px; } .hblock .lead .line.fit { font-size: 22px; } }
 .hblock .lead { max-width: none; margin: 0; line-height: 1.45; }
 .hblock h1 .or { color: var(--orange); }
 .hero .cta { display: flex; flex-direction: column; align-items: center; gap: 14px; margin-top: 30px; }
@@ -491,14 +497,35 @@ const CHECKOUT_URL = 'https://pay.cakto.com.br/3e5s38u_1212384';
 
   // bloco do topo: selo, promessa e subpromessa com a mesma largura (bordas alinhadas)
   const hb = document.getElementById('hblock'), fits = [...hb.querySelectorAll('.fit')];
+  // mede cada linha num "rascunho" fora da tela, para nunca alargar a página no celular
+  const meas = document.createElement('div');
+  meas.setAttribute('aria-hidden', 'true');
+  meas.style.cssText = 'position:absolute;left:-10000px;top:0;visibility:hidden;pointer-events:none;white-space:nowrap';
+  document.body.appendChild(meas);
+  function larguraTela() {
+    const vals = [document.documentElement.clientWidth, window.innerWidth, screen && screen.width].filter(v => v > 0);
+    return Math.min.apply(null, vals);
+  }
   function fitHead() {
     const par = hb.parentElement, cs = getComputedStyle(par);
-    const W = Math.min(520, par.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)); if (!W) return;
+    const pad = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+    const W = Math.min(520, par.clientWidth - pad, larguraTela() - pad); if (!(W > 0)) return;
     hb.style.setProperty('--hw', W + 'px');
-    fits.forEach(l => { l.style.fontSize = '100px'; l.style.letterSpacing = ''; const w = l.scrollWidth; l.style.fontSize = (100 * (W - 2) / w) + 'px'; });
+    fits.forEach(l => {
+      const host = l.parentElement.cloneNode(false), c = l.cloneNode(true);
+      host.removeAttribute('id'); host.style.margin = '0';
+      c.style.fontSize = '100px'; c.style.letterSpacing = ''; c.style.display = 'inline-block'; c.style.whiteSpace = 'nowrap';
+      host.appendChild(c); meas.appendChild(host);
+      const w = c.getBoundingClientRect().width; meas.removeChild(host);
+      if (w > 0) l.style.fontSize = (100 * (W - 4) / w) + 'px';
+    });
   }
   fitHead(); (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(fitHead);
   addEventListener('resize', fitHead);
+  addEventListener('orientationchange', () => setTimeout(fitHead, 150));
+  addEventListener('load', fitHead);
+  if (window.visualViewport) visualViewport.addEventListener('resize', fitHead);
+  if (window.ResizeObserver) { let lastW = 0; new ResizeObserver(() => { const w = hb.parentElement.clientWidth; if (Math.abs(w - lastW) > 1) { lastW = w; fitHead(); } }).observe(hb.parentElement); }
 
   // VSL: começa sem som; ao clicar, recomeça do início com som
   const hv = document.getElementById('heroVid'), hs = document.getElementById('heroSound');

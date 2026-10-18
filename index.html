@@ -97,12 +97,11 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .hero h1 { width: 100%; max-width: 560px; min-width: 0; }
 .hero h1 .line { display: block; white-space: nowrap; line-height: 1.3; }
 .hero .lead { font-size: clamp(18px, 2.2vw, 22px); max-width: 40ch; font-weight: 500; }
-.hblock { width: var(--hw, 100%); max-width: 100%; display: grid; justify-items: stretch; }
+.hblock { width: min(100%, 520px); max-width: 100%; min-width: 0; display: grid; justify-items: stretch; position: relative; container-type: inline-size; }
 .hblock .eyebrow { display: flex; justify-content: center; width: 100%; box-sizing: border-box; }
 .hblock .line { display: block; white-space: nowrap; }
 html, body { max-width: 100%; overflow-x: hidden; }
 @supports (overflow: clip) { html, body { overflow-x: clip; } }
-.hblock { overflow: visible; }
 .hblock h1 .line.fit { font-size: 6.4vw; }
 .hblock .lead .line.fit { font-size: 3.9vw; }
 @media (min-width: 560px) { .hblock h1 .line.fit { font-size: 36px; } .hblock .lead .line.fit { font-size: 22px; } }
@@ -497,27 +496,25 @@ const CHECKOUT_URL = 'https://pay.cakto.com.br/3e5s38u_1212384';
 
   // bloco do topo: selo, promessa e subpromessa com a mesma largura (bordas alinhadas)
   const hb = document.getElementById('hblock'), fits = [...hb.querySelectorAll('.fit')];
-  // mede cada linha num "rascunho" fora da tela, para nunca alargar a página no celular
+  // Cada linha é medida uma vez (no tamanho 100px) e depois recebe um tamanho
+  // proporcional à largura REAL do bloco. Com suporte a "cqi" o próprio navegador
+  // recalcula sozinho; sem suporte, usamos a largura medida do bloco.
+  const usaCqi = !!(window.CSS && CSS.supports && CSS.supports('width', '1cqi'));
   const meas = document.createElement('div');
   meas.setAttribute('aria-hidden', 'true');
-  meas.style.cssText = 'position:absolute;left:-10000px;top:0;visibility:hidden;pointer-events:none;white-space:nowrap';
-  document.body.appendChild(meas);
-  function larguraTela() {
-    const vals = [document.documentElement.clientWidth, window.innerWidth, screen && screen.width].filter(v => v > 0);
-    return Math.min.apply(null, vals);
-  }
+  meas.style.cssText = 'position:absolute;right:100%;top:0;margin-right:10000px;visibility:hidden;pointer-events:none;white-space:nowrap;width:max-content';
+  hb.appendChild(meas);
   function fitHead() {
-    const par = hb.parentElement, cs = getComputedStyle(par);
-    const pad = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
-    const W = Math.min(520, par.clientWidth - pad, larguraTela() - pad); if (!(W > 0)) return;
-    hb.style.setProperty('--hw', W + 'px');
+    const W = hb.clientWidth; if (!(W > 0)) return;
     fits.forEach(l => {
       const host = l.parentElement.cloneNode(false), c = l.cloneNode(true);
-      host.removeAttribute('id'); host.style.margin = '0';
+      host.removeAttribute('id'); host.style.margin = '0'; host.style.width = 'max-content'; host.style.maxWidth = 'none';
       c.style.fontSize = '100px'; c.style.letterSpacing = ''; c.style.display = 'inline-block'; c.style.whiteSpace = 'nowrap';
       host.appendChild(c); meas.appendChild(host);
       const w = c.getBoundingClientRect().width; meas.removeChild(host);
-      if (w > 0) l.style.fontSize = (100 * (W - 4) / w) + 'px';
+      if (!(w > 0)) return;
+      const k = 100 / w * 0.985; // 1,5% de folga para a sombra 3D não encostar na borda
+      l.style.fontSize = usaCqi ? (k * 100).toFixed(4) + 'cqi' : (k * W).toFixed(2) + 'px';
     });
   }
   fitHead(); (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(fitHead);
@@ -525,7 +522,7 @@ const CHECKOUT_URL = 'https://pay.cakto.com.br/3e5s38u_1212384';
   addEventListener('orientationchange', () => setTimeout(fitHead, 150));
   addEventListener('load', fitHead);
   if (window.visualViewport) visualViewport.addEventListener('resize', fitHead);
-  if (window.ResizeObserver) { let lastW = 0; new ResizeObserver(() => { const w = hb.parentElement.clientWidth; if (Math.abs(w - lastW) > 1) { lastW = w; fitHead(); } }).observe(hb.parentElement); }
+  if (window.ResizeObserver) { let lastW = 0; new ResizeObserver(() => { const w = hb.clientWidth; if (Math.abs(w - lastW) > 1) { lastW = w; fitHead(); } }).observe(hb); }
 
   // VSL: começa sem som; ao clicar, recomeça do início com som
   const hv = document.getElementById('heroVid'), hs = document.getElementById('heroSound');
